@@ -109,6 +109,8 @@ static class Program
         Console.WriteLine($"   timestamp: {dateStr}");
         Console.WriteLine($"frame length: {packet.Data.Length} bytes");
 
+        PrintLinkLayer(packet.GetPacket());
+
         Console.WriteLine();
         HexDump(packet.Data);
     }
@@ -173,5 +175,10 @@ static class Program
             "-----------------------------------------------------------------"
                 + "----------"
         );
+    }
+
+    static void PrintLinkLayer(RawCapture packet)
+    {
+        Console.WriteLine($"          L2: {packet.LinkLayerType}");
     }
 }
