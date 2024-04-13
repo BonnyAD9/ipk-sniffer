@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.Xml;
 using IpkSniffer.Cli;
+using PacketDotNet;
 using SharpPcap;
 
 namespace IpkSniffer;
@@ -84,7 +86,7 @@ static class Program
         device.StopCapture();
         device.Close();
 
-        return 1;
+        return 0;
     }
 
     static void CapturePacket(object sender, PacketCapture packet)
@@ -92,7 +94,84 @@ static class Program
         if (count >= maxCount)
             return;
         count += 1;
-        // TODO
-        Console.WriteLine("Recieved packet");
+        if (count == 1) {
+
+            Console.WriteLine(
+                "-------------------------------------------------------------"
+                    + "--------------"
+            );
+        }
+        var dateStr = XmlConvert.ToString(
+            packet.Header.Timeval.Date,
+            XmlDateTimeSerializationMode.Local
+        );
+        Console.WriteLine($"    packet #: {count}/{maxCount}");
+        Console.WriteLine($"   timestamp: {dateStr}");
+        Console.WriteLine($"frame length: {packet.Data.Length} bytes");
+
+        Console.WriteLine();
+        HexDump(packet.Data);
+    }
+
+    static void HexDump(ReadOnlySpan<byte> data)
+    {
+        Console.WriteLine(
+            "        0  1  2  3  4  5  6  7   8  9  A  B  C  D  E  F  "
+                + " 01234567 89ABCDEF"
+        );
+
+        void PrintHex(ReadOnlySpan<byte> data)
+        {
+            for (int i = 0; i < 16; ++i)
+            {
+                if (i == 8)
+                    Console.Write(" ");
+
+                if (i >= data.Length)
+                {
+                    Console.Write("   ");
+                    continue;
+                }
+
+                Console.Write($"{data[i]:x2} ");
+            }
+        }
+
+        void PrintAscii(ReadOnlySpan<byte> data)
+        {
+            for (int i = 0; i < 16; ++i)
+            {
+                if (i == 8)
+                    Console.Write(" ");
+
+                if (i >= data.Length)
+                {
+                    Console.Write(" ");
+                    continue;
+                }
+
+                if (data[i] is < 32 or >= 127)
+                    Console.Write(".");
+                else
+                    Console.Write((char)data[i]);
+            }
+        }
+
+        var offset = 0;
+        while (data.Length != 0) {
+            Console.Write($"0x{offset:X4}: ");
+            PrintHex(data);
+            Console.Write(" ");
+            PrintAscii(data);
+            offset += 16;
+            Console.WriteLine();
+            if (data.Length < 16)
+                break;
+            data = data[16..];
+        }
+        Console.WriteLine(
+            "-----------------------------------------------------------------"
+                + "----------"
+        );
     }
 }
