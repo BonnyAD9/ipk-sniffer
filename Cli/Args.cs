@@ -124,7 +124,7 @@ class Args
         return res;
     }
 
-    private T ParseSecond<T>(ref ReadOnlySpan<string> args) where T: IParsable<T>
+    private T ParseSecond<T>(ref ReadOnlySpan<string> args) where T : IParsable<T>
     {
         var arg = args[0];
         if (T.TryParse(TakeSecond(ref args), null, out T? res))
