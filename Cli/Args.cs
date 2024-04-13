@@ -3,7 +3,8 @@ namespace IpkSniffer.Cli;
 class Args
 {
     public int ArgCount { get; init; }
-    public Action Action { get; private set; } = Action.None;
+    private Action? action = null;
+    public Action Action => action ?? Action.List;
     public string Interface { get; private set; } = "";
     public ushort? DstPort { get; private set; } = null;
     public ushort? SrcPort { get; private set; } = null;
@@ -26,28 +27,23 @@ class Args
 
     private void ValidateArgs()
     {
-        if (Action == Action.None)
+        if (!action.HasValue)
         {
             if (ArgCount != 0)
-            {
                 throw new ArgumentException("Missing interface (use '-i').");
-            }
-            Action = Action.List;
+            action = Action.List;
         }
 
         if ((DstPort.HasValue || SrcPort.HasValue)
             && (filter.HasFlag(Filter.Tcp) || filter.HasFlag(Filter.Udp))
-        ) {
+        )
             throw new ArgumentException("Filtering port has no effect.");
-        }
 
         if (PacketCount <= 0)
-        {
             throw new ArgumentException(
                 "Invalid number of packets to capture. "
                     + "Number must be positive."
             );
-        }
     }
 
     private void ParseArgs(ReadOnlySpan<string> args)
@@ -65,17 +61,15 @@ class Args
                 case "-i" or "--interface":
                     if (ArgCount == 1)
                     {
-                        Action = Action.List;
+                        action = Action.List;
                         break;
                     }
                     Interface = TakeSecond(ref args);
                     if (Interface == "")
-                    {
                         throw new ArgumentException(
                             "Invalid interface. Cannot be empty string."
                         );
-                    }
-                    Action = Action.Sniff;
+                    action = Action.Sniff;
                     continue;
                 case "-t" or "--tcp":
                     filter |= Filter.Tcp;
@@ -122,11 +116,9 @@ class Args
     private string TakeSecond(ref ReadOnlySpan<string> args)
     {
         if (args.Length < 2)
-        {
             throw new ArgumentException(
                 $"Expected another argument after {args[0]}."
             );
-        }
         var res = args[1];
         args = args[2..];
         return res;
@@ -136,9 +128,7 @@ class Args
     {
         var arg = args[0];
         if (T.TryParse(TakeSecond(ref args), null, out T? res))
-        {
             return res;
-        }
         throw new ArgumentException(
             $"Failed to parse argument to {arg} to type {typeof(T).Name}."
         );
