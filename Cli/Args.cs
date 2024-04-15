@@ -6,10 +6,10 @@ class Args
     private Action? action = null;
     public Action Action => action ?? Action.List;
     public string Interface { get; private set; } = "";
+    public ushort? AnyPort { get; private set; } = null;
     public ushort? DstPort { get; private set; } = null;
     public ushort? SrcPort { get; private set; } = null;
-    private Filter filter = Filter.None;
-    public Filter Filter => filter == Filter.None ? Filter.All : filter;
+    public Filter Filter { get; private set; }
     public nuint PacketCount { get; private set; } = 1;
 
     private Args(int count)
@@ -35,7 +35,8 @@ class Args
         }
 
         if ((DstPort.HasValue || SrcPort.HasValue)
-            && (filter.HasFlag(Filter.Tcp) || filter.HasFlag(Filter.Udp))
+            && !Filter.HasFlag(Filter.Tcp)
+            && !Filter.HasFlag(Filter.Udp)
         )
             throw new ArgumentException("Filtering port has no effect.");
 
@@ -72,14 +73,13 @@ class Args
                     action = Action.Sniff;
                     continue;
                 case "-t" or "--tcp":
-                    filter |= Filter.Tcp;
+                    Filter |= Filter.Tcp;
                     break;
                 case "-u" or "--udp":
-                    filter |= Filter.Udp;
+                    Filter |= Filter.Udp;
                     break;
                 case "-p":
-                    DstPort = ParseSecond<ushort>(ref args);
-                    SrcPort = DstPort;
+                    AnyPort = ParseSecond<ushort>(ref args);
                     continue;
                 case "--port-destination":
                     DstPort = ParseSecond<ushort>(ref args);
@@ -88,26 +88,28 @@ class Args
                     SrcPort = ParseSecond<ushort>(ref args);
                     continue;
                 case "--icmp4":
-                    filter |= Filter.Icmp4;
+                    Filter |= Filter.Icmp4;
                     break;
                 case "--icmp6":
-                    filter |= Filter.Icmp6;
+                    Filter |= Filter.Icmp6;
                     break;
                 case "--arp":
-                    filter |= Filter.Arp;
+                    Filter |= Filter.Arp;
                     break;
                 case "--ndp":
-                    filter |= Filter.Ndp;
+                    Filter |= Filter.Ndp;
                     break;
                 case "--igmp":
-                    filter |= Filter.Igmp;
+                    Filter |= Filter.Igmp;
                     break;
                 case "--mld":
-                    filter |= Filter.Mld;
+                    Filter |= Filter.Mld;
                     break;
                 case "-n":
                     PacketCount = ParseSecond<nuint>(ref args);
                     continue;
+                default:
+                    throw new ArgumentException($"Unknown argument {arg}");
             }
             args = args[1..];
         }

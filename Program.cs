@@ -1,7 +1,11 @@
 ﻿using System.Diagnostics;
+using System.Net.NetworkInformation;
+using System.Text;
 using System.Xml;
 using IpkSniffer.Cli;
 using PacketDotNet;
+using PacketDotNet.Ieee80211;
+using PacketDotNet.Utils;
 using SharpPcap;
 
 namespace IpkSniffer;
@@ -47,6 +51,7 @@ static class Program
 
     static nuint count = 0;
     static nuint maxCount = 1;
+    static FilterData filter = new(Filter.None);
 
     static int Sniff(Args args)
     {
@@ -55,6 +60,7 @@ static class Program
             .First(d => d.Name == args.Interface);
 
         maxCount = args.PacketCount;
+        filter = new(args.Filter, args.AnyPort, args.SrcPort, args.DstPort);
 
         device.Open(read_timeout: 100);
         device.OnPacketArrival += CapturePacket;
@@ -93,10 +99,11 @@ static class Program
     {
         if (count >= maxCount)
             return;
-        count += 1;
-        if (count == 1) {
 
-            Console.WriteLine(
+        StringBuilder sb = new();
+        if (count == 0) {
+
+            sb.AppendLine(
                 "-------------------------------------------------------------"
                     + "--------------"
             );
@@ -105,13 +112,16 @@ static class Program
             packet.Header.Timeval.Date,
             XmlDateTimeSerializationMode.Local
         );
-        Console.WriteLine($"    packet #: {count}/{maxCount}");
-        Console.WriteLine($"   timestamp: {dateStr}");
-        Console.WriteLine($"frame length: {packet.Data.Length} bytes");
+        sb.AppendLine($"    packet #: {count + 1}/{maxCount}");
+        sb.AppendLine($"   timestamp: {dateStr}");
+        sb.AppendLine($"frame length: {packet.Data.Length} bytes");
 
-        PrintLinkLayer(packet.GetPacket());
+        var type = PrintLinkLayer(packet.GetPacket(), sb);
+        if (!filter.ShouldShow(type))
+            return;
 
-        Console.WriteLine();
+        count += 1;
+        Console.WriteLine(sb);
         HexDump(packet.Data);
     }
 
@@ -177,8 +187,289 @@ static class Program
         );
     }
 
-    static void PrintLinkLayer(RawCapture packet)
+    static FilterData PrintLinkLayer(RawCapture packet, StringBuilder sb)
     {
-        Console.WriteLine($"          L2: {packet.LinkLayerType}");
+        sb.AppendLine($"          L2: {packet.LinkLayerType}");
+
+        return packet.GetPacket() switch
+        {
+            EthernetPacket p => PrintEthernetPacket(p, sb),
+            LinuxSllPacket p => PrintLinuxSllPacket(p, sb),
+            NullPacket p => PrintNullPacket(p, sb),
+            PppPacket p => PrintPppPacket(p, sb),
+            MacFrame p => PrintMacFrame(p, sb),
+            RadioPacket p => PrintRadioPacket(p, sb),
+            PpiPacket p => PrintPpiPacket(p, sb),
+            RawIPPacket p => PrintRawIPPacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
     }
+
+    // L2
+
+    private static FilterData PrintEthernetPacket(
+        EthernetPacket packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine(
+            "     src MAC: "
+                + HexPrinter.PrintMACAddress(packet.SourceHardwareAddress)
+        );
+        sb.AppendLine(
+            "     dst MAC: "
+                + HexPrinter.PrintMACAddress(packet.DestinationHardwareAddress)
+        );
+        sb.AppendLine($"          L3: {packet.Type}");
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            ArpPacket p => PrintArpPacket(p, sb),
+            LldpPacket p => PrintLldpPacket(p, sb),
+            PppoePacket p => PrintPppoePacket(p, sb),
+            WakeOnLanPacket p => PrintWakeOnLanPacket(p, sb),
+            Ieee8021QPacket p => PrintIeee8021QPacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintLinuxSllPacket(
+        LinuxSllPacket packet,
+        StringBuilder sb
+    ) {
+        if (packet.LinkLayerAddressType == 1) {
+            sb.AppendLine($"          L3: {packet.EthernetProtocolType}");
+            var adr = new PhysicalAddress(packet.LinkLayerAddress[..6]);
+            sb.AppendLine($"     src MAC: {HexPrinter.PrintMACAddress(adr)}");
+        }
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            ArpPacket p => PrintArpPacket(p, sb),
+            LldpPacket p => PrintLldpPacket(p, sb),
+            PppoePacket p => PrintPppoePacket(p, sb),
+            WakeOnLanPacket p => PrintWakeOnLanPacket(p, sb),
+            Ieee8021QPacket p => PrintIeee8021QPacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintNullPacket(NullPacket packet, StringBuilder sb)
+    {
+        sb.AppendLine($"          L3: {packet.Protocol}");
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintPppPacket(PppPacket packet, StringBuilder sb)
+    {
+        sb.AppendLine($"          L3: {packet.Protocol}");
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintMacFrame(MacFrame packet, StringBuilder sb)
+        => new FilterData(Filter.None);
+
+    private static FilterData PrintRadioPacket(
+        RadioPacket packet,
+        StringBuilder sb
+    ) => new FilterData(Filter.None);
+
+    private static FilterData PrintPpiPacket(PpiPacket packet, StringBuilder sb)
+        => new FilterData(Filter.None);
+
+    private static FilterData PrintRawIPPacket(
+        RawIPPacket packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"          L3: {packet.Protocol}");
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    // L3
+
+    private static FilterData PrintIPv4Packet(
+        IPv4Packet packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"      src IP: {packet.SourceAddress}");
+        sb.AppendLine($"      dst IP: {packet.SourceAddress}");
+        sb.AppendLine($"          L4: {packet.Protocol}");
+
+        return packet.PayloadPacket switch
+        {
+            TcpPacket p => PrintTcpPacket(p, sb),
+            UdpPacket p => PrintUdpPacket(p, sb),
+            IcmpV4Packet p => PrintIcmpV4Packet(p, sb),
+            IcmpV6Packet p => PrintIcmpV6Packet(p, sb),
+            IgmpPacket p => PrintIgmpPacket(p, sb),
+            OspfPacket p => PrintOspfPacket(p, sb),
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            GrePacket p => PrintGrePacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintIPv6Packet(
+        IPv6Packet packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"      src IP: {packet.SourceAddress}");
+        sb.AppendLine($"      dst IP: {packet.SourceAddress}");
+        sb.AppendLine($"          L4: {packet.Protocol}");
+
+        return packet.PayloadPacket switch
+        {
+            TcpPacket p => PrintTcpPacket(p, sb),
+            UdpPacket p => PrintUdpPacket(p, sb),
+            IcmpV4Packet p => PrintIcmpV4Packet(p, sb),
+            IcmpV6Packet p => PrintIcmpV6Packet(p, sb),
+            IgmpPacket p => PrintIgmpPacket(p, sb),
+            OspfPacket p => PrintOspfPacket(p, sb),
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            GrePacket p => PrintGrePacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    private static FilterData PrintArpPacket(
+        ArpPacket packet,
+        StringBuilder sb
+    ) => new FilterData(Filter.None);
+
+    private static FilterData PrintLldpPacket(
+        LldpPacket packet,
+        StringBuilder sb
+    ) => new FilterData(Filter.None);
+
+    private static FilterData PrintPppoePacket(
+        PppoePacket packet,
+        StringBuilder sb
+    ) => packet.PayloadPacket switch
+    {
+        PppPacket p => PrintPppPacket(p, sb),
+        _ => new FilterData(Filter.None),
+    };
+
+    private static FilterData PrintWakeOnLanPacket(
+        WakeOnLanPacket packet,
+        StringBuilder sb
+    ) => new FilterData(Filter.None);
+
+    private static FilterData PrintIeee8021QPacket(Ieee8021QPacket packet, StringBuilder sb)
+    {
+        sb.AppendLine($"          L3: {packet.Type}");
+
+        return packet.PayloadPacket switch
+        {
+            IPv4Packet p => PrintIPv4Packet(p, sb),
+            IPv6Packet p => PrintIPv6Packet(p, sb),
+            ArpPacket p => PrintArpPacket(p, sb),
+            LldpPacket p => PrintLldpPacket(p, sb),
+            PppoePacket p => PrintPppoePacket(p, sb),
+            WakeOnLanPacket p => PrintWakeOnLanPacket(p, sb),
+            Ieee8021QPacket p => PrintIeee8021QPacket(p, sb),
+            _ => new FilterData(Filter.None),
+        };
+    }
+
+    // L4:
+
+    private static FilterData PrintTcpPacket(
+        TcpPacket packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"    src port: {packet.SourcePort}");
+        sb.AppendLine($"    dst port: {packet.DestinationPort}");
+        return new FilterData(
+            Filter.Tcp,
+            packet.SourcePort,
+            packet.DestinationPort
+        );
+    }
+
+    private static FilterData PrintUdpPacket(
+        UdpPacket packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"    src port: {packet.SourcePort}");
+        sb.AppendLine($"    dst port: {packet.DestinationPort}");
+        return new FilterData(
+            Filter.Udp,
+            packet.SourcePort,
+            packet.DestinationPort
+        );
+    }
+
+    private static FilterData PrintIcmpV4Packet(
+        IcmpV4Packet packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"        type: {packet.TypeCode}");
+        return new(Filter.Icmp4);
+    }
+
+    private static FilterData PrintIcmpV6Packet(
+        IcmpV6Packet packet,
+        StringBuilder sb
+    ) {
+        sb.AppendLine($"        type: {packet.Type}");
+        var filter = Filter.Icmp6;
+
+        switch (packet.Type)
+        {
+            case IcmpV6Type.MulticastListenerQuery:
+            case IcmpV6Type.MulticastListenerReport:
+            case IcmpV6Type.MulticastListenerDone:
+            case IcmpV6Type.Version2MulticastListenerReport:
+                filter |= Filter.Mld;
+                break;
+            case IcmpV6Type.RouterSolicitation:
+            case IcmpV6Type.RouterAdvertisement:
+            case IcmpV6Type.NeighborSolicitation:
+            case IcmpV6Type.NeighborAdvertisement:
+            case IcmpV6Type.RedirectMessage:
+                filter |= Filter.Ndp;
+                break;
+        }
+
+        return new(filter);
+    }
+
+    private static FilterData PrintIgmpPacket(
+        IgmpPacket packet,
+        StringBuilder sb
+    ) => new(Filter.Igmp);
+
+    private static FilterData PrintOspfPacket(
+        OspfPacket packet,
+        StringBuilder sb
+    ) => new(Filter.None);
+
+    private static FilterData PrintGrePacket(
+        GrePacket packet,
+        StringBuilder sb
+    ) => new(Filter.None);
 }
