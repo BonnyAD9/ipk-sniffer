@@ -68,17 +68,17 @@ static class L4
     }
 
     public static FilterData PrintIgmpPacket(
-        IgmpPacket packet,
-        StringBuilder sb
+        IgmpPacket _packet,
+        StringBuilder _sb
     ) => new(Filter.Igmp);
 
     public static FilterData PrintOspfPacket(
-        OspfPacket packet,
-        StringBuilder sb
+        OspfPacket _packet,
+        StringBuilder _sb
     ) => new(Filter.None);
 
     public static FilterData PrintGrePacket(
-        GrePacket packet,
-        StringBuilder sb
+        GrePacket _packet,
+        StringBuilder _sb
     ) => new(Filter.None);
 }

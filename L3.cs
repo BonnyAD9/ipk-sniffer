@@ -25,7 +25,7 @@ static class L3
             IPv4Packet p => PrintIPv4Packet(p, sb),
             IPv6Packet p => PrintIPv6Packet(p, sb),
             GrePacket p => L4.PrintGrePacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
@@ -48,19 +48,19 @@ static class L3
             IPv4Packet p => PrintIPv4Packet(p, sb),
             IPv6Packet p => PrintIPv6Packet(p, sb),
             GrePacket p => L4.PrintGrePacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
     public static FilterData PrintArpPacket(
-        ArpPacket packet,
-        StringBuilder sb
-    ) => new FilterData(Filter.None);
+        ArpPacket _packet,
+        StringBuilder _sb
+    ) => new(Filter.None);
 
     public static FilterData PrintLldpPacket(
         LldpPacket packet,
         StringBuilder sb
-    ) => new FilterData(Filter.None);
+    ) => new(Filter.None);
 
     public static FilterData PrintPppoePacket(
         PppoePacket packet,
@@ -68,16 +68,18 @@ static class L3
     ) => packet.PayloadPacket switch
     {
         PppPacket p => L2.PrintPppPacket(p, sb),
-        _ => new FilterData(Filter.None),
+        _ => new(Filter.None),
     };
 
     public static FilterData PrintWakeOnLanPacket(
-        WakeOnLanPacket packet,
-        StringBuilder sb
-    ) => new FilterData(Filter.None);
+        WakeOnLanPacket _packet,
+        StringBuilder _sb
+    ) => new(Filter.None);
 
-    public static FilterData PrintIeee8021QPacket(Ieee8021QPacket packet, StringBuilder sb)
-    {
+    public static FilterData PrintIeee8021QPacket(
+        Ieee8021QPacket packet,
+        StringBuilder sb
+    ) {
         sb.AppendLine($"          L2: {packet.Type}");
 
         return packet.PayloadPacket switch
@@ -89,7 +91,7 @@ static class L3
             PppoePacket p => PrintPppoePacket(p, sb),
             WakeOnLanPacket p => PrintWakeOnLanPacket(p, sb),
             Ieee8021QPacket p => PrintIeee8021QPacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 }

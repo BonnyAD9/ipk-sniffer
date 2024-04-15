@@ -32,7 +32,7 @@ static class L2
             PppoePacket p => L3.PrintPppoePacket(p, sb),
             WakeOnLanPacket p => L3.PrintWakeOnLanPacket(p, sb),
             Ieee8021QPacket p => L3.PrintIeee8021QPacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
@@ -55,7 +55,7 @@ static class L2
             PppoePacket p => L3.PrintPppoePacket(p, sb),
             WakeOnLanPacket p => L3.PrintWakeOnLanPacket(p, sb),
             Ieee8021QPacket p => L3.PrintIeee8021QPacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
@@ -67,7 +67,7 @@ static class L2
         {
             IPv4Packet p => L3.PrintIPv4Packet(p, sb),
             IPv6Packet p => L3.PrintIPv6Packet(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
@@ -79,20 +79,22 @@ static class L2
         {
             IPv4Packet p => L3.PrintIPv4Packet(p, sb),
             IPv6Packet p => L3.PrintIPv6Packet(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 
-    public static FilterData PrintMacFrame(MacFrame packet, StringBuilder sb)
-        => new FilterData(Filter.None);
+    public static FilterData PrintMacFrame(MacFrame _packet, StringBuilder _sb)
+        => new(Filter.None);
 
     public static FilterData PrintRadioPacket(
-        RadioPacket packet,
-        StringBuilder sb
-    ) => new FilterData(Filter.None);
+        RadioPacket _packet,
+        StringBuilder _sb
+    ) => new(Filter.None);
 
-    public static FilterData PrintPpiPacket(PpiPacket packet, StringBuilder sb)
-        => new FilterData(Filter.None);
+    public static FilterData PrintPpiPacket(
+        PpiPacket _packet,
+        StringBuilder _sb
+    ) => new(Filter.None);
 
     public static FilterData PrintRawIPPacket(
         RawIPPacket packet,
@@ -104,7 +106,7 @@ static class L2
         {
             IPv4Packet p => L3.PrintIPv4Packet(p, sb),
             IPv6Packet p => L3.PrintIPv6Packet(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 }

@@ -199,7 +199,7 @@ static class Program
             RadioPacket p => L2.PrintRadioPacket(p, sb),
             PpiPacket p => L2.PrintPpiPacket(p, sb),
             RawIPPacket p => L2.PrintRawIPPacket(p, sb),
-            _ => new FilterData(Filter.None),
+            _ => new(Filter.None),
         };
     }
 }
