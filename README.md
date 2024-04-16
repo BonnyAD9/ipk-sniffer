@@ -59,3 +59,8 @@ the logic for parsing the arguments.
 Testing is done with unit tests using xunit. The tests are focused on the
 filtering because that is the most complicated and important part of the
 project.
+
+## Extra functionality
+- Shows the packet number
+- Shows the types of various packets up to L4
+- Supports additional L2 protocols (LinuxSll, Null, Ppp, RawIP)
