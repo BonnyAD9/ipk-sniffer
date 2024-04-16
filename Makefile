@@ -4,9 +4,9 @@ publish:
 	dotnet publish -p:PublishSingleFile=true
 	mv bin/Release/*/*/publish/ipk-sniffer ipk-sniffer
 
-# test:
-# 	cd tests && dotnet test
-#
+test:
+	cd tests && dotnet test
+
 # validate: submit
 # 	-rm -rf submit
 # 	mkdir submit
@@ -24,5 +24,5 @@ publish:
 
 clean:
 	dotnet clean
-# 	cd tests && dotnet clean
+	cd tests && dotnet clean
 # 	-rm -rf submit

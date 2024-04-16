@@ -2,7 +2,7 @@ using IpkSniffer.Cli;
 
 namespace IpkSniffer;
 
-record struct FilterData(
+public record struct FilterData(
     Filter Categories,
     ushort? AnyPort,
     ushort? SrcPort,
@@ -12,7 +12,7 @@ record struct FilterData(
         : this(categories, null, srcPort, dstPort) {}
     public FilterData(Filter categories) : this(categories, null, null) {}
 
-    public bool ShouldShow(FilterData other)
+    public readonly bool ShouldShow(FilterData other)
     {
         // Check if filtering should be done
         if (Categories == Filter.None)
@@ -37,6 +37,7 @@ record struct FilterData(
 
         if (DstPort.HasValue && DstPort == other.DstPort)
             return true;
-        return false;
+
+        return !AnyPort.HasValue && !SrcPort.HasValue && !DstPort.HasValue;
     }
 }

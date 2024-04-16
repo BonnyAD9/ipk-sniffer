@@ -54,3 +54,8 @@ not filtered. Otherwise only packets that are set in the filter are shown.
 
 The class `Args` contains the data parsed from the arguments and it contains
 the logic for parsing the arguments.
+
+## Testing
+Testing is done with unit tests using xunit. The tests are focused on the
+filtering because that is the most complicated and important part of the
+project.
