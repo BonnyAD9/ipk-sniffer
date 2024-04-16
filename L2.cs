@@ -7,12 +7,17 @@ using PacketDotNet.Utils;
 
 namespace IpkSniffer;
 
+/// <summary>
+/// Printing of Link Layer packet data
+/// </summary>
 static class L2
 {
     public static FilterData PrintEthernetPacket(
         EthernetPacket packet,
         StringBuilder sb
     ) {
+        // Using the `HexPrinter.PrintMACAddress` so that it is printed in the
+        // format with `:`
         sb.AppendLine(
             "     src MAC: "
                 + HexPrinter.PrintMACAddress(packet.SourceHardwareAddress)

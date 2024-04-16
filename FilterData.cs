@@ -27,6 +27,7 @@ public record struct FilterData(
         if ((cont & ~(Filter.Tcp | Filter.Udp)) != Filter.None)
             return true;
 
+        // Check for the ports
         if (AnyPort.HasValue &&
             (AnyPort == other.SrcPort || AnyPort == other.DstPort)
         )
@@ -38,6 +39,7 @@ public record struct FilterData(
         if (DstPort.HasValue && DstPort == other.DstPort)
             return true;
 
+        // Ports don't match, show the packet only when the filter has no ports
         return !AnyPort.HasValue && !SrcPort.HasValue && !DstPort.HasValue;
     }
 }

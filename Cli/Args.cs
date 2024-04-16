@@ -27,6 +27,7 @@ class Args
 
     private void ValidateArgs()
     {
+        // Make sure there is an action to take
         if (!action.HasValue)
         {
             if (ArgCount != 0)
@@ -34,12 +35,14 @@ class Args
             action = Action.List;
         }
 
+        // Throw error when port filters are set but they would have no effect
         if ((DstPort.HasValue || SrcPort.HasValue)
             && !Filter.HasFlag(Filter.Tcp)
             && !Filter.HasFlag(Filter.Udp)
         )
             throw new ArgumentException("Filtering port has no effect.");
 
+        // check for valid value of the number of packets to capture
         if (PacketCount <= 0)
             throw new ArgumentException(
                 "Invalid number of packets to capture. "
@@ -66,6 +69,7 @@ class Args
                         break;
                     }
                     Interface = TakeSecond(ref args);
+                    // Empty value is not a valid interface
                     if (Interface == "")
                         throw new ArgumentException(
                             "Invalid interface. Cannot be empty string."
@@ -115,7 +119,16 @@ class Args
         }
     }
 
-    private string TakeSecond(ref ReadOnlySpan<string> args)
+    /// <summary>
+    /// Returns the second value in the span and pops the first two values from
+    /// the span.
+    /// </summary>
+    /// <param name="args">The span to operate on</param>
+    /// <returns>The second value in the span</returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when there are not enough values in the span.
+    /// </exception>
+    private static string TakeSecond(ref ReadOnlySpan<string> args)
     {
         if (args.Length < 2)
             throw new ArgumentException(
@@ -126,7 +139,19 @@ class Args
         return res;
     }
 
-    private T ParseSecond<T>(ref ReadOnlySpan<string> args) where T : IParsable<T>
+    /// <summary>
+    /// Takes the second value from the span, parses it into the given type and
+    /// pops the first two values from the span.
+    /// </summary>
+    /// <typeparam name="T">Type to parse to.</typeparam>
+    /// <param name="args">The span to operate on.</param>
+    /// <returns>
+    /// The second value from the span parsed to the given type
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// When span is too short or the value couldn't be parsed
+    /// </exception>
+    private static T ParseSecond<T>(ref ReadOnlySpan<string> args) where T : IParsable<T>
     {
         var arg = args[0];
         if (T.TryParse(TakeSecond(ref args), null, out T? res))
