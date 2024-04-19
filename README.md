@@ -1,7 +1,13 @@
 # ipk-sniffer
 
 ## Contents
-TODO
+- [About](#about)
+- [Code structure](#code-structure)
+    - [`IpkSniffer`](#ipksniffer)
+        - [`FilterData.cs`](#filterdatacs)
+    - [`IpkSniffer.Cli`](#ipksniffercli)
+- [Testing](#testing)
+- [Extra functionality](#extra-functionality)
 
 ## About
 This project is implementation of a network sniffer in C#. It can capture and
